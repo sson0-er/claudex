@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# Stand-in for the codex CLI: records argv, then emits the JSONL shape
+# observed from `codex exec --json` (codex-cli 0.153.4) so claudex-codex
+# can be tested without spending tokens.
+printf '%s\n' "$@" > "${FAKE_CODEX_ARGS:?}"
+[ -n "${FAKE_CODEX_PWD:-}" ] && pwd > "$FAKE_CODEX_PWD"
+if [ -n "${FAKE_CODEX_EXIT:-}" ]; then
+  echo '{"type":"thread.started","thread_id":"t-fake"}'
+  exit "$FAKE_CODEX_EXIT"
+fi
+cat <<'EOF'
+{"type":"thread.started","thread_id":"t-fake-123"}
+{"type":"turn.started"}
+{"type":"item.completed","item":{"id":"item_0","type":"agent_message","text":"working..."}}
+{"type":"item.completed","item":{"id":"item_1","type":"command_execution","command":"ls","exit_code":0,"status":"completed"}}
+{"type":"item.completed","item":{"id":"item_2","type":"agent_message","text":"{\"summary\":\"ok\",\"findings\":[]}"}}
+{"type":"turn.completed","usage":{"input_tokens":1,"output_tokens":1}}
+EOF

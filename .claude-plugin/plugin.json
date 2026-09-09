@@ -1,0 +1,5 @@
+{
+  "name": "claudex",
+  "description": "Orchestrator plugin: Claude subagents for research/design/planning/review, Codex CLI for design review and implementation, file-based handoff with evidence and decision records.",
+  "version": "0.1.0"
+}

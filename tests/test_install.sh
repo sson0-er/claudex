@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+source "$(dirname "$0")/lib.sh"
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+TMP="$(cd "$(make_tmp)" && pwd)"
+
+"$ROOT/install.sh" --dest "$TMP/skills/claudex" >/dev/null
+assert_exit 0 $? "install exits 0"
+for p in .claude-plugin/plugin.json agents/researcher.md bin/claudex-init schemas/findings.schema.json skills/orchestrate/SKILL.md templates/task.md README.md; do
+  assert_file_exists "$TMP/skills/claudex/$p" "installed $p"
+done
+[ -x "$TMP/skills/claudex/bin/claudex-init" ] && pass || fail "bin scripts stay executable"
+[ ! -e "$TMP/skills/claudex/tests" ] && pass || fail "tests not installed"
+[ ! -e "$TMP/skills/claudex/docs" ] && pass || fail "docs not installed"
+
+# Re-install replaces the previous copy and leaves no temp or backup dirs behind.
+echo stale > "$TMP/skills/claudex/stale.txt"
+"$ROOT/install.sh" --dest "$TMP/skills/claudex" >/dev/null
+assert_exit 0 $? "re-install exits 0"
+[ ! -e "$TMP/skills/claudex/stale.txt" ] && pass || fail "re-install replaces old copy"
+assert_eq "claudex" "$(ls -A "$TMP/skills")" "no temp or backup dirs left beside the install"
+
+# Never replace a directory that is not a previous install of this plugin.
+mkdir -p "$TMP/other" && echo keep > "$TMP/other/keep.txt"
+"$ROOT/install.sh" --dest "$TMP/other" 2>/dev/null
+assert_exit 2 $? "refuses foreign directory"
+assert_file_exists "$TMP/other/keep.txt" "foreign directory untouched"
+
+# Default destination follows CLAUDE_CONFIG_DIR.
+CLAUDE_CONFIG_DIR="$TMP/cfg" "$ROOT/install.sh" >/dev/null
+assert_file_exists "$TMP/cfg/skills/claudex/.claude-plugin/plugin.json" "default dest under CLAUDE_CONFIG_DIR"
+
+"$ROOT/install.sh" --dest 2>/dev/null
+assert_exit 2 $? "missing --dest value is a usage error"
+
+test_summary

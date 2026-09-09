@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+# Role-based wrapper around the Codex CLI. Roles pin model, effort and
+# sandbox so callers (the orchestrate skill) cannot drift from the spec.
+# Output is always taken from `--json` events because `codex exec resume`
+# has no `-o` flag; one extraction path keeps all roles consistent.
+set -eu
+
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+CODEX="${CLAUDEX_CODEX_BIN:-codex}"
+MODEL_DESIGN_REVIEW="${CLAUDEX_MODEL_DESIGN_REVIEW:-gpt-5.6-sol}"
+MODEL_IMPLEMENT="${CLAUDEX_MODEL_IMPLEMENT:-gpt-5.6-luna}"
+
+usage() {
+  cat >&2 <<EOF
+Usage: claudex-codex <design-review|implement|fix> --prompt-file FILE --out FILE
+                  [--cwd DIR] [--thread-file FILE] [--thread ID] [--events FILE]
+EOF
+  exit 2
+}
+
+[ $# -ge 1 ] || usage
+role="$1"; shift
+prompt_file="" out="" cwd="$PWD" thread_file="" thread="" events=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --prompt-file) [ $# -ge 2 ] || usage; prompt_file="$2"; shift 2 ;;
+    --out) [ $# -ge 2 ] || usage; out="$2"; shift 2 ;;
+    --cwd) [ $# -ge 2 ] || usage; cwd="$2"; shift 2 ;;
+    --thread-file) [ $# -ge 2 ] || usage; thread_file="$2"; shift 2 ;;
+    --thread) [ $# -ge 2 ] || usage; thread="$2"; shift 2 ;;
+    --events) [ $# -ge 2 ] || usage; events="$2"; shift 2 ;;
+    *) usage ;;
+  esac
+done
+[ -n "$prompt_file" ] && [ -n "$out" ] || usage
+[ -f "$prompt_file" ] || { echo "prompt file not found: $prompt_file" >&2; exit 2; }
+prompt="$(cat "$prompt_file")"
+if [ -z "$events" ]; then
+  events="$(mktemp "${TMPDIR:-/tmp}/claudex-codex-events.XXXXXX")"
+  # Only clean up the file we created; a caller-supplied --events file is kept.
+  trap 'rm -f "$events"' EXIT
+fi
+
+# Config values are TOML, hence the embedded double quotes.
+case "$role" in
+  design-review)
+    set -- exec -m "$MODEL_DESIGN_REVIEW" -c 'model_reasoning_effort="high"' \
+      -s read-only --output-schema "$ROOT/schemas/findings.schema.json" ;;
+  implement)
+    set -- exec -m "$MODEL_IMPLEMENT" -c 'model_reasoning_effort="xhigh"' \
+      -s workspace-write --output-schema "$ROOT/schemas/report.schema.json" ;;
+  fix)
+    [ -n "$thread" ] || usage
+    set -- exec resume "$thread" -c "model=\"$MODEL_IMPLEMENT\"" \
+      -c 'model_reasoning_effort="xhigh"' -c 'sandbox_mode="workspace-write"' \
+      --output-schema "$ROOT/schemas/report.schema.json" ;;
+  *) usage ;;
+esac
+
+status=0
+if [ "$role" = "fix" ]; then
+  # `codex exec resume` has no -C flag (verified against codex-cli 0.153.4:
+  # `error: unexpected argument '-C' found`), so cd into the target dir instead.
+  ( cd "$cwd" && "$CODEX" "$@" --json --skip-git-repo-check "$prompt" </dev/null ) >"$events" || status=$?
+else
+  "$CODEX" "$@" --json -C "$cwd" --skip-git-repo-check "$prompt" </dev/null >"$events" || status=$?
+fi
+
+if [ -n "$thread_file" ]; then
+  jq -r 'select(.type == "thread.started") | .thread_id' "$events" | head -n1 > "$thread_file"
+fi
+# The final agent_message is the deliverable; earlier ones are progress chatter.
+jq -r 'select(.type == "item.completed" and .item.type == "agent_message") | .item.text' "$events" \
+  | tail -n1 > "$out"
+
+exit "$status"
