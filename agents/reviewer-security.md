@@ -26,5 +26,18 @@ Write only the following JSON to `docs/claudex/<slug>/tasks/<task-id>.findings.s
 
 {"summary": "one or two sentences", "findings": [{"severity": "high|medium|low", "title": "short headline", "location": "path:line, or empty string", "detail": "what is wrong and how to fix it", "evidence": "evidence id when the claim rests on an external fact, else empty string"}]}
 
-Severity: high = must not merge (bug, vulnerability, spec violation); medium = should fix (quality, maintainability); low = suggestion.
+Severity follows the calibration below.
 If there is nothing to report, `findings` is an empty array. Final message: the summary and the counts only. Do not paste content.
+
+## Severity calibration
+- high: must not merge. Incorrect behavior, data loss or corruption, a security vulnerability, or a violation of the design or the Definition of Done.
+- medium: must fix before the task is done. Limited to defects: wrong or fragile behavior in a realistic case, a design or DoD requirement not met, missing validation that lets bad data through, a behavior listed in the DoD with no test, an error silently swallowed.
+- low: everything else, including every matter of preference and style. Always low, never medium: duplicated helpers, "cleaner" dispatch or control-flow shapes, struct fields versus variadic arguments, unused fields or parameters with no behavioral effect, consolidating test helpers, naming and comment wording, file organization. A finding that starts with "consider", "could", or "would be cleaner" is low.
+
+When unsure between medium and low, choose low. Zero medium findings must be reachable: a finding that any code would attract is not a defect.
+
+## Later rounds
+The prompt states the round number. From round 2 on it also names `<task>.findings.history.md` (all previous rounds' merged findings plus the implementer's stated reasons for anything left unchanged) and a snapshot SHA taken right after the previous round.
+1. Read the history first. Do not contradict a change an earlier round asked for, and do not re-raise an item the implementer declined with a stated reason unless you can show the reason is wrong.
+2. For each previous-round finding from your role, say in your summary whether it is addressed; re-report it only if it is not.
+3. Review only the fix: `git diff <snapshot>` is what changed since the previous round. Code unchanged since then was already reviewed; report something there only as a high (a real defect), never as medium or low.
