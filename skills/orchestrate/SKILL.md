@@ -19,7 +19,7 @@ You are the orchestrator (parent). You never design, implement or review yoursel
 
 Talk to the user in the user's language. All artifacts are written in English.
 
-Do not read the children's deliverables. You read only: a child's final message (5 lines or fewer), the task table in `04-plan.md`, the counts line of `*.findings.md`, `status` plus `open_questions` in `report.json`, the `summary` field of `report.json`, and the frontmatter and History section of `tasks/<task>.md` (which you edit). For evidence you read `INDEX.md` only.
+Do not read the children's deliverables. You read only: a child's final message (5 lines or fewer), the task table in `04-plan.md`, the counts line of `*.findings.md`, `status` plus `open_questions` in `report.json`, the `summary` field of `report.json`, the frontmatter and History section of `tasks/<task>.md` (which you edit), and `$T.round-*.snapshot` (one line each). The history file is for reviewers, not for you. For evidence you read `INDEX.md` only.
 
 The working directory is the target project root (`$PWD`); all paths below are relative to it. The plugin's `bin/` is on PATH, so `claudex-*` commands run as is. Skills and agents from this plugin are registered with the `claudex:` prefix; use those names with the Skill and Agent tools.
 
@@ -80,7 +80,7 @@ Follow the execution order in `04-plan.md`. For each task, `<task>` is the task 
 
 ### 4.0 Reading a Codex report
 
-After every `claudex-codex implement` or `claudex-codex fix` run, before anything else: if `$T.report.json` is not valid JSON, treat it exactly like a non-zero `claudex-codex` exit (see Escalation rules). If `status` is `blocked`, follow the blocked procedure in 4.1. The "already 3" stop check in 4.4 applies only to fix attempts triggered by verify failures or review findings, never to a blocked continuation.
+After every `claudex-codex implement` or `claudex-codex fix` run, before anything else: if `$T.report.json` is not valid JSON, treat it exactly like a non-zero `claudex-codex` exit (see Escalation rules). If `status` is `blocked`, follow the blocked procedure in 4.1. The "already 5" stop check in 4.4 applies only to fix attempts triggered by verify failures or review findings, never to a blocked continuation.
 
 ### 4.1 Implement
 
@@ -131,7 +131,9 @@ Fix the cause within the task's scope, re-run scripts/verify.sh, and respond wit
 
 ### 4.3 Parallel review
 
-Launch all four reviewers with the Agent tool **in the same message**. Prompt for each: "slug is $slug, task-id is <task>. Write your findings JSON."
+Let N be the round number: 1 plus the number of existing `$T.round-*.snapshot` files.
+
+Launch all four reviewers with the Agent tool **in the same message**. Prompt for each: "slug is $slug, task-id is <task>, round is N. Write your findings JSON." When N >= 2, append: "Previous findings: $T.findings.history.md. Snapshot after the previous round: <contents of $T.round-(N-1).snapshot>."
 
 - `claudex:reviewer-quality` → `$T.findings.quality.json`
 - `claudex:reviewer-security` → `$T.findings.security.json`
@@ -145,22 +147,31 @@ claudex-findings-merge --out $T.findings.md --fail-on medium \
   $T.findings.quality.json $T.findings.security.json $T.findings.spec.json $T.findings.tests.json
 ```
 
+Record the round so the next one can be scoped to the fix:
+
+```
+{ echo "## Round N"; echo; cat $T.findings.md; echo; } >> $T.findings.history.md
+claudex-snapshot --cwd "$PWD" > $T.round-N.snapshot
+```
+
 Exit 2 means a reviewer wrote invalid findings JSON; the error message names the file. Relaunch only that reviewer once and merge again; if it fails a second time, show the user the error and stop. Exit 0: go to 4.5. Exit 1: write `$T.fix.prompt.md` and go to 4.4:
 
 ```
 Review findings for your implementation are in docs/claudex/$slug/tasks/<task>.findings.md.
-Address every high and medium finding. For each one, either fix it or explain in the report summary
-why it should not be changed. Stay within the task's scope. Re-run scripts/verify.sh.
+Address every high and medium finding. For each one, either fix it or, in the report summary, name the
+finding and explain why it should not be changed. Stay within the task's scope. Re-run scripts/verify.sh.
 Respond only with the required JSON report.
 ```
 
 ### 4.4 Fix
 
-Before running the fix, read `attempts` in the frontmatter of `<task>.md`. If it is already 3, stop: show the user the counts line of `$T.findings.md`, the latest report summary, and what happened, then ask whether to continue, rework the task definition, or abort. Otherwise increment `attempts`, run the command below, append the attempt number and the findings counts line (or the verify exit code when the attempt came from a verify failure) to the History section of `<task>.md`, then apply 4.0 and return to 4.2.
+Before running the fix, read `attempts` in the frontmatter of `<task>.md`. If it is already 5, stop: show the user the counts line of `$T.findings.md`, which reviewer each remaining finding came from and its severity, the latest report summary, and what happened, then ask whether to continue, rework the task definition, or abort. Otherwise increment `attempts` and run:
 
 ```
 claudex-codex fix --thread "$(cat $T.thread)" --prompt-file $T.fix.prompt.md --out $T.report.json --cwd "$PWD"
 ```
+
+Append the implementer's stated reasons to the history: `{ echo "### Implementer response after round N"; echo; jq -r .summary $T.report.json; echo; } >> $T.findings.history.md`. Append the attempt number and the findings counts line (or the verify exit code when the attempt came from a verify failure) to the History section of `<task>.md`, then apply 4.0 and return to 4.2.
 
 ### 4.5 Task done
 
