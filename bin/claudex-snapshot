@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# Captures the working tree as a commit object and prints its SHA without
+# touching HEAD, the index or the tree. Reviewers diff against it to see
+# only what a fix round changed. Unreferenced objects live until git gc
+# prunes them (default two weeks), long enough for a task loop.
+set -eu
+usage() { echo "Usage: claudex-snapshot [--cwd DIR]" >&2; exit 2; }
+cwd="$PWD"
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --cwd) [ $# -ge 2 ] || usage; cwd="$2"; shift 2 ;;
+    *) usage ;;
+  esac
+done
+cd "$cwd" || exit 2
+git rev-parse --git-dir >/dev/null 2>&1 || { echo "not a git repository: $cwd" >&2; exit 3; }
+# A private, initially absent index leaves the user's staging area untouched.
+tmp_index="$(mktemp "${TMPDIR:-/tmp}/claudex-snapshot.XXXXXX")"
+rm -f "$tmp_index"
+trap 'rm -f "$tmp_index"' EXIT
+GIT_INDEX_FILE="$tmp_index" git add -A . >/dev/null
+tree="$(GIT_INDEX_FILE="$tmp_index" git write-tree)"
+parent=""
+if git rev-parse --verify -q HEAD >/dev/null 2>&1; then parent="-p $(git rev-parse HEAD)"; fi
+GIT_AUTHOR_NAME=claudex GIT_AUTHOR_EMAIL=claudex@localhost \
+GIT_COMMITTER_NAME=claudex GIT_COMMITTER_EMAIL=claudex@localhost \
+  git commit-tree "$tree" $parent -m "claudex snapshot"
