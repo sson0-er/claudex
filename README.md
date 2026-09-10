@@ -47,6 +47,7 @@ The flow is: requirements (interactive), research, design, Codex design review, 
 | `bin/claudex-verify` | Verify gate: runs `scripts/verify.sh` and keeps the log |
 | `bin/claudex-findings-merge` | Merges review findings and applies a severity threshold |
 | `bin/claudex-init` | Creates the `docs/claudex/` layout |
+| `bin/claudex-snapshot` | Snapshots the working tree as a commit object so later review rounds diff only the fix |
 | `agents/` | researcher, designer, planner, reviewer-{quality,security,spec,tests}, doc-writer |
 | `skills/` | orchestrate (full flow), define-requirements (interactive), record-evidence (recording rules) |
 | `templates/` | Artifact templates |
