@@ -11,7 +11,9 @@ git -C "$TMP/repo" config user.email "test@example.com"
 git -C "$TMP/repo" config user.name "Test"
 echo "one" > "$TMP/repo/a.txt"
 echo "*.log" > "$TMP/repo/.gitignore"
+echo "kept" > "$TMP/repo/keep.log"
 git -C "$TMP/repo" add a.txt .gitignore
+git -C "$TMP/repo" add -f keep.log
 git -C "$TMP/repo" commit -q -m "initial"
 
 head_before="$(git -C "$TMP/repo" rev-parse HEAD)"
@@ -36,6 +38,12 @@ case "$diffnames" in
   *c.log*) fail "snapshot diff must not include ignored file" ;;
   *) pass ;;
 esac
+# A force-added file that matches .gitignore is tracked and must survive the snapshot.
+case "$diffnames" in
+  *keep.log*) fail "ignored-but-tracked file must not appear as changed" ;;
+  *) pass ;;
+esac
+assert_contains "$(git -C "$TMP/repo" ls-tree -r --name-only "$sha1")" "keep.log" "ignored-but-tracked file is kept in the snapshot"
 
 head_after="$(git -C "$TMP/repo" rev-parse HEAD)"
 assert_eq "$head_before" "$head_after" "HEAD unchanged after snapshot"
@@ -52,6 +60,23 @@ if [ "$sha1" != "$sha2" ]; then pass; else fail "second snapshot must differ fro
 diffnames2="$(git -C "$TMP/repo" diff --name-only "$sha1" "$sha2")"
 assert_eq "b.txt" "$diffnames2" "diff between snapshots is exactly the changed file"
 
+# A subdirectory --cwd still captures the whole tree.
+mkdir -p "$TMP/repo/sub" && echo "x" > "$TMP/repo/sub/x.txt"
+sha_sub="$("$ROOT/bin/claudex-snapshot" --cwd "$TMP/repo/sub")"
+tree_sub="$(git -C "$TMP/repo" ls-tree -r --name-only "$sha_sub")"
+assert_contains "$tree_sub" "a.txt" "subdir cwd captures files outside the subdir"
+assert_contains "$tree_sub" "sub/x.txt" "subdir cwd captures the subdir's untracked file"
+
+# The command reviewers run in later rounds (snapshot-to-snapshot diff) must show
+# changes to files that were never committed, which plain `git diff <sha>` cannot.
+echo "def f(): return 1" > "$TMP/repo/impl.py"
+s1="$("$ROOT/bin/claudex-snapshot" --cwd "$TMP/repo")"
+echo "def f(): return 2" > "$TMP/repo/impl.py"
+echo "x = 1" > "$TMP/repo/added.py"
+s2="$("$ROOT/bin/claudex-snapshot" --cwd "$TMP/repo")"
+expected="$(printf 'A\tadded.py\nM\timpl.py')"
+assert_eq "$expected" "$(git -C "$TMP/repo" diff --name-status "$s1" "$s2")" "snapshot-to-snapshot diff shows added and modified untracked files"
+
 # Non-git directory exits 3. $TMP itself lives under this project's own
 # repo (tests/.tmp/...), so use a directory outside any repo instead.
 notgit="$(mktemp -d "${TMPDIR:-/tmp}/claudex-snapshot-notgit.XXXXXX")"
@@ -65,7 +90,7 @@ trap - EXIT
 "$ROOT/bin/claudex-snapshot" --cwd >/dev/null 2>&1
 assert_exit 2 $? "missing --cwd value exits 2"
 
-# No temp file left behind in TMPDIR across all the runs above.
+# The private index directory is removed on exit (checked on one more run).
 before="$(ls "${TMPDIR:-/tmp}" | grep -c '^claudex-snapshot\.')"
 "$ROOT/bin/claudex-snapshot" --cwd "$TMP/repo" >/dev/null
 after="$(ls "${TMPDIR:-/tmp}" | grep -c '^claudex-snapshot\.')"

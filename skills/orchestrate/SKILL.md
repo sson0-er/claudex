@@ -131,9 +131,9 @@ Fix the cause within the task's scope, re-run scripts/verify.sh, and respond wit
 
 ### 4.3 Parallel review
 
-Let N be the round number: 1 plus the number of existing `$T.round-*.snapshot` files.
+Let N be the round number: 1 plus the number of existing `$T.round-*.snapshot` files. Then record the tree the reviewers are about to see: `claudex-snapshot --cwd "$PWD" > $T.round-N.snapshot`. (Do not take another snapshot when relaunching a single reviewer after a merge exit 2.)
 
-Launch all four reviewers with the Agent tool **in the same message**. Prompt for each: "slug is $slug, task-id is <task>, round is N. Write your findings JSON." When N >= 2, append: "Previous findings: $T.findings.history.md. Snapshot after the previous round: <contents of $T.round-(N-1).snapshot>."
+Launch all four reviewers with the Agent tool **in the same message**. Prompt for each: "slug is $slug, task-id is <task>, round is N. Write your findings JSON." When N >= 2, append: "Previous findings: $T.findings.history.md. Snapshots: previous round <contents of $T.round-(N-1).snapshot>, current <contents of $T.round-N.snapshot>."
 
 - `claudex:reviewer-quality` → `$T.findings.quality.json`
 - `claudex:reviewer-security` → `$T.findings.security.json`
@@ -147,14 +147,11 @@ claudex-findings-merge --out $T.findings.md --fail-on medium \
   $T.findings.quality.json $T.findings.security.json $T.findings.spec.json $T.findings.tests.json
 ```
 
-Record the round so the next one can be scoped to the fix:
+Exit 2 means a reviewer wrote invalid findings JSON; the error message names the file. Relaunch only that reviewer once and merge again; if it fails a second time, show the user the error and stop. Exit 0: go to 4.5. Exit 1: append this round to the history so the next round's reviewers can read it, then write `$T.fix.prompt.md` and go to 4.4:
 
 ```
 { echo "## Round N"; echo; cat $T.findings.md; echo; } >> $T.findings.history.md
-claudex-snapshot --cwd "$PWD" > $T.round-N.snapshot
 ```
-
-Exit 2 means a reviewer wrote invalid findings JSON; the error message names the file. Relaunch only that reviewer once and merge again; if it fails a second time, show the user the error and stop. Exit 0: go to 4.5. Exit 1: write `$T.fix.prompt.md` and go to 4.4:
 
 ```
 Review findings for your implementation are in docs/claudex/$slug/tasks/<task>.findings.md.
@@ -171,7 +168,7 @@ Before running the fix, read `attempts` in the frontmatter of `<task>.md`. If it
 claudex-codex fix --thread "$(cat $T.thread)" --prompt-file $T.fix.prompt.md --out $T.report.json --cwd "$PWD"
 ```
 
-Append the implementer's stated reasons to the history: `{ echo "### Implementer response after round N"; echo; jq -r .summary $T.report.json; echo; } >> $T.findings.history.md`. Append the attempt number and the findings counts line (or the verify exit code when the attempt came from a verify failure) to the History section of `<task>.md`, then apply 4.0 and return to 4.2.
+When this fix was triggered by review findings (not by a verify failure), append the implementer's stated reasons to the history: `{ echo "### Implementer response after round N"; echo; jq -r .summary $T.report.json; echo; } >> $T.findings.history.md`. Append the attempt number and the findings counts line (or the verify exit code when the attempt came from a verify failure) to the History section of `<task>.md`, then apply 4.0 and return to 4.2.
 
 ### 4.5 Task done
 

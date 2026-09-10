@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 # Captures the working tree as a commit object and prints its SHA without
-# touching HEAD, the index or the tree. Reviewers diff against it to see
-# only what a fix round changed. Unreferenced objects live until git gc
-# prunes them (default two weeks), long enough for a task loop.
+# touching HEAD, the index or the tree. The private index is seeded from
+# HEAD (so force-added, ignored-but-tracked files are kept) and then only
+# changed paths are rehashed. Reviewers diff snapshots to see only what a
+# fix round changed. Unreferenced objects live until git gc prunes them
+# (default two weeks), long enough for a task loop.
 set -eu
 usage() { echo "Usage: claudex-snapshot [--cwd DIR]" >&2; exit 2; }
 cwd="$PWD"
@@ -14,11 +16,15 @@ while [ $# -gt 0 ]; do
 done
 cd "$cwd" || exit 2
 git rev-parse --git-dir >/dev/null 2>&1 || { echo "not a git repository: $cwd" >&2; exit 3; }
-# A private, initially absent index leaves the user's staging area untouched.
-tmp_index="$(mktemp "${TMPDIR:-/tmp}/claudex-snapshot.XXXXXX")"
-rm -f "$tmp_index"
-trap 'rm -f "$tmp_index"' EXIT
-GIT_INDEX_FILE="$tmp_index" git add -A . >/dev/null
+# A private index in its own directory (not a bare mktemp file, to avoid the
+# /tmp symlink race) leaves the user's staging area untouched.
+tmp_dir="$(mktemp -d "${TMPDIR:-/tmp}/claudex-snapshot.XXXXXX")"
+trap 'rm -rf "$tmp_dir"' EXIT
+tmp_index="$tmp_dir/index"
+if git rev-parse --verify -q HEAD >/dev/null 2>&1; then
+  GIT_INDEX_FILE="$tmp_index" git read-tree HEAD
+fi
+GIT_INDEX_FILE="$tmp_index" git add -A >/dev/null
 tree="$(GIT_INDEX_FILE="$tmp_index" git write-tree)"
 parent=""
 if git rev-parse --verify -q HEAD >/dev/null 2>&1; then parent="-p $(git rev-parse HEAD)"; fi
