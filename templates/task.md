@@ -16,7 +16,7 @@ attempts: 0
 -
 
 ## Implementation notes
-(Point to the relevant design sections and be concrete.)
+(Point to the relevant design files and sections, and be concrete.)
 
 ## Definition of Done
 - [ ]
