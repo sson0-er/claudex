@@ -1,6 +1,6 @@
 ---
 name: orchestrate
-description: Drives a feature end to end. Requirements (interactive), research, design, Codex design review, planning, then per task Codex implementation, deterministic verify gate, four parallel reviews and a bounded fix loop, then documentation. Waits for the user at three approval gates.
+description: Drives a feature end to end. Requirements (interactive), research, design, Codex design review, planning, then per task Codex implementation, deterministic verify gate, four parallel reviews and a bounded fix loop, then a low-findings triage with a fourth gate, then documentation. Waits for the user at four approval gates.
 argument-hint: <feature-slug>
 arguments: [slug]
 allowed-tools: Read, Write, Edit, Bash, Agent, AskUserQuestion, Skill, Glob, Grep
@@ -19,7 +19,7 @@ You are the orchestrator (parent). You never design, implement or review yoursel
 
 Talk to the user in the user's language. All artifacts are written in English.
 
-Do not read the children's deliverables. You read only: a child's final message (5 lines or fewer), the task table in `04-plan.md`, the counts line of `*.findings.md`, `status` plus `open_questions` in `report.json`, the `summary` field of `report.json`, the frontmatter and History section of `tasks/<task>.md` (which you edit), and `$T.round-*.snapshot` (one line each). The history file is for reviewers, not for you. For evidence you read `INDEX.md` only.
+Do not read the children's deliverables. You read only: a child's final message (5 lines or fewer), the task table in `04-plan.md`, the counts line of `*.findings.md`, `status` plus `open_questions` in `report.json`, the `summary` field of `report.json`, the frontmatter and History section of `tasks/<task>.md` (which you edit), `$T.round-*.snapshot` (one line each), the summary table and candidate sections of `05-low-findings-triage.md`, and `docs/claudex/review-policy.md` (which you append to). The history file is for reviewers, not for you. For evidence you read `INDEX.md` only.
 
 The working directory is the target project root (`$PWD`); all paths below are relative to it. The plugin's `bin/` is on PATH, so `claudex-*` commands run as is. Skills and agents from this plugin are registered with the `claudex:` prefix; use those names with the Skill and Agent tools.
 
@@ -174,10 +174,30 @@ When this fix was triggered by review findings (not by a verify failure), append
 
 Set `status` in `<task>.md` to `done` and move to the next task. When every task is done, go to Phase 5.
 
+## Phase 4.9: low-findings triage → gate 4
+
+Runs once, after every task is done and before documentation.
+
+1. Merge the leftover lows deterministically:
+
+```
+claudex-findings-triage --tasks-dir docs/claudex/$slug/tasks --out docs/claudex/$slug/05-low-findings.md
+```
+
+The command prints `raw: <M> merged: <N>`. If N is 0, skip to Phase 5.
+
+2. Launch `claudex:triage` with the Agent tool. Prompt: "slug is $slug. Read 05-low-findings.md and write 05-low-findings-triage.md."
+3. Show the user the summary table and the "A. Follow-up task candidates" and "D. Convention candidates" sections of `docs/claudex/$slug/05-low-findings-triage.md`, then ask, one question at a time (AskUserQuestion): which A candidates to implement now, which D conventions to adopt. This is gate 4; do not continue without the user's answers.
+4. Act on the answers:
+   - A candidates chosen: launch `claudex:planner`. Prompt: "slug is $slug. Append tasks to 04-plan.md and tasks/ for these follow-up candidates from 05-low-findings-triage.md: <chosen candidates>." Then run Phase 4 for the new tasks only, and return here (rerun step 1; the merged list will be smaller). Do this loop at most once.
+   - B items: ask the user each question, one at a time. Relaunch `claudex:designer` with "Apply these answers to 03-design.md and record the decisions: ...".
+   - C items, and D items the user declined: append them to `docs/claudex/review-policy.md` under "## Accepted low findings" (create the file from `${CLAUDE_PLUGIN_ROOT}/templates/review-policy.md` if it does not exist), one line each with today's date and $slug.
+   - D conventions adopted: append each rule to `AGENTS.md` and to "## Conventions adopted" in `docs/claudex/review-policy.md`.
+
 ## Phase 5: documentation and completion report
 
 1. Launch `claudex:doc-writer`. Prompt: "slug is $slug. Update the documentation."
-2. Report to the user: number of tasks, total fix iterations, remaining low findings, documents updated, evidence and decision entries added. Include the artifact paths.
+2. Report to the user: number of tasks, total fix iterations, remaining low findings, the triage result: merged lows per bucket and conventions adopted, documents updated, evidence and decision entries added. Include the artifact paths.
 
 ## Escalation rules
 
