@@ -37,7 +37,7 @@ From the target project root, inside a Claude Code session:
 
 Plugin skills are always namespaced with the plugin name, so the short form `/orchestrate` does not exist.
 
-The flow is: requirements (interactive), research, design, Codex design review, plan, then per task Codex implementation, verify gate, four parallel reviews and a bounded fix loop, then documentation. It stops for explicit approval after requirements, after design, and after the plan.
+The flow is: requirements (interactive), research, design, Codex design review, plan, then per task Codex implementation, verify gate, four parallel reviews and a bounded fix loop, then a low-findings triage, then documentation. It stops for explicit approval after requirements, after design, after the plan, and after the triage (four gates).
 
 ## Layout
 
@@ -46,9 +46,10 @@ The flow is: requirements (interactive), research, design, Codex design review, 
 | `bin/claudex-codex` | Role-based Codex launcher (design-review / implement / fix) |
 | `bin/claudex-verify` | Verify gate: runs `scripts/verify.sh` and keeps the log |
 | `bin/claudex-findings-merge` | Merges review findings and applies a severity threshold |
+| `bin/claudex-findings-triage` | Merges leftover low findings across all tasks of a feature, deterministically, before the triage agent classifies them |
 | `bin/claudex-init` | Creates the `docs/claudex/` layout |
 | `bin/claudex-snapshot` | Snapshots the working tree as a commit object so later review rounds diff only the fix |
-| `agents/` | researcher, designer, planner, reviewer-{quality,security,spec,tests}, doc-writer |
+| `agents/` | researcher, designer, planner, reviewer-{quality,security,spec,tests}, triage, doc-writer |
 | `skills/` | orchestrate (full flow), define-requirements (interactive), record-evidence (recording rules) |
 | `templates/` | Artifact templates |
 | `schemas/` | JSON Schemas for findings and reports |
