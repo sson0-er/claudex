@@ -5,12 +5,13 @@ TMP="$(cd "$(make_tmp)" && pwd)"
 
 "$ROOT/install.sh" --dest "$TMP/skills/claudex" >/dev/null
 assert_exit 0 $? "install exits 0"
-for p in .claude-plugin/plugin.json agents/researcher.md bin/claudex-init schemas/findings.schema.json skills/orchestrate/SKILL.md templates/task.md README.md; do
+for p in .claude-plugin/plugin.json agents/researcher.md bin/claudex-init schemas/findings.schema.json skills/orchestrate/SKILL.md templates/task.md templates/design/README.md templates/design/interfaces/component.md README.md; do
   assert_file_exists "$TMP/skills/claudex/$p" "installed $p"
 done
 [ -x "$TMP/skills/claudex/bin/claudex-init" ] && pass || fail "bin scripts stay executable"
 [ ! -e "$TMP/skills/claudex/tests" ] && pass || fail "tests not installed"
 [ ! -e "$TMP/skills/claudex/docs" ] && pass || fail "docs not installed"
+[ ! -e "$TMP/skills/claudex/templates/design.md" ] && pass || fail "old single-file design template is gone"
 
 # Re-install replaces the previous copy and leaves no temp or backup dirs behind.
 echo stale > "$TMP/skills/claudex/stale.txt"
