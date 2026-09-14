@@ -24,7 +24,7 @@ done
 assert_file_exists "$ROOT/skills/record-evidence/SKILL.md" "record-evidence skill"
 assert_file_exists "$ROOT/skills/define-requirements/SKILL.md" "define-requirements skill"
 assert_file_exists "$ROOT/skills/orchestrate/SKILL.md" "orchestrate skill"
-for a in researcher designer planner reviewer-quality reviewer-security reviewer-spec reviewer-tests doc-writer; do
+for a in researcher designer planner reviewer-quality reviewer-security reviewer-spec reviewer-tests triage doc-writer; do
   assert_file_exists "$ROOT/agents/$a.md" "agent $a"
 done
 

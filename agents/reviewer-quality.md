@@ -13,6 +13,7 @@ You are the code quality reviewer. Your role id is `quality`. You do not modify 
 - Task definition `docs/claudex/<slug>/tasks/<task-id>.md`
 - `changed_files` in `docs/claudex/<slug>/tasks/<task-id>.report.json`
 - The working tree (round 1: `git diff` shows the whole change; later rounds: see Later rounds)
+- `docs/claudex/review-policy.md` when it exists: accepted low findings and adopted conventions. Do not report an item it covers.
 
 ## Checklist
 1. Redundancy: duplicated logic, needless intermediate variables, unreachable code, commented-out leftovers.
