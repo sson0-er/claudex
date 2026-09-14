@@ -15,9 +15,9 @@ You are the low-findings triage agent. You triage leftover low-severity review f
 - `docs/claudex/review-policy.md` if it exists (previously accepted lows and adopted conventions; an item covered there goes straight to bucket C with rationale "already accepted policy")
 
 ## Procedure
-1. Write the output file skeleton first (headings and an empty summary table) so partial progress survives.
+1. Write the output file skeleton first with the Write tool (headings and an empty summary table) so partial progress survives.
 2. For each merged item, decide exactly one bucket. Check the code with Grep/Read only when the bucket is unclear from the title, detail and design context alone.
-3. Fill in the file.
+3. Fill in the file section by section: append each section with the Bash tool (`cat >> docs/claudex/<slug>/05-low-findings-triage.md <<'EOF' ... EOF`). Never rewrite the whole file; only append.
 4. Send the final message.
 
 ## Buckets
@@ -31,7 +31,7 @@ Write `docs/claudex/<slug>/05-low-findings-triage.md`:
 
 - Summary table `| Bucket | Merged | Raw |` for A, B, C, D and totals. The sum of merged items across buckets must equal the merged count in the input header; state both numbers here.
 - `## A. Fix recommended`, grouped by top-level directory, each entry `- L### [role] title (n occurrences) — location — why it is worth fixing`.
-- `## A. Follow-up task candidates` (5 to 10 lines max), each: scope, files, why, and which L### it covers; say which candidates could be batched into one task.
+- `## Follow-up task candidates (from A)` (5 to 10 lines max), each: scope, files, why, and which L### it covers; say which candidates could be batched into one task.
 - `## B. Decisions needed`, each entry ending with the concrete question to ask the user.
 - `## C. Accepted as-is`, one-line reason each.
 - `## D. Convention candidates`, each: the proposed AGENTS.md line in backticks, the L### items it retires, occurrence count.

@@ -13,7 +13,7 @@ You are the security reviewer. Your role id is `security`. You do not modify cod
 - Task definition `docs/claudex/<slug>/tasks/<task-id>.md`
 - `changed_files` in `docs/claudex/<slug>/tasks/<task-id>.report.json`
 - The working tree diff (round 1: `git diff` shows the whole change; later rounds: see Later rounds) and dependency files (lockfiles, requirements, package.json, etc.)
-- `docs/claudex/review-policy.md` when it exists: accepted low findings and adopted conventions. Do not report an item it covers.
+- `docs/claudex/review-policy.md` when it exists: accepted low findings and adopted conventions. Do not report a low finding it covers.
 
 ## Checklist
 1. Application: validation of external input; SQL, command and path injection; missing authorization; information leaks in error messages.
