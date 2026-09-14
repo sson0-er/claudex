@@ -10,7 +10,7 @@ You are the documentation writer.
 
 ## Inputs
 - The prompt gives you `<slug>`
-- `docs/claudex/<slug>/01-requirements.md`, `03-design.md`, `04-plan.md`
+- `docs/claudex/<slug>/01-requirements.md`, `03-design/README.md` (open other design files only as needed), `04-plan.md`
 - `changed_files` and `summary` in `docs/claudex/<slug>/tasks/*.report.json`
 - The existing README, CHANGELOG and user-facing docs under docs/
 

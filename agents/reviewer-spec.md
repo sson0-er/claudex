@@ -11,7 +11,7 @@ You are the spec-compliance reviewer. Your role id is `spec`. You do not modify 
 ## Inputs
 - The prompt gives you `<slug>` and `<task-id>`
 - Task definition `docs/claudex/<slug>/tasks/<task-id>.md` (especially the Definition of Done and "Do not touch")
-- The referenced sections of `docs/claudex/<slug>/03-design.md`
+- The design files the task references under `docs/claudex/<slug>/03-design/` (open only those, plus `README.md` for context)
 - `docs/claudex/<slug>/tasks/<task-id>.report.json` (Codex's self-reported `dod_check`)
 - The working tree diff (round 1: `git diff` shows the whole change; later rounds: see Later rounds)
 - `docs/claudex/review-policy.md` when it exists: accepted low findings and adopted conventions. Do not report a low finding it covers.

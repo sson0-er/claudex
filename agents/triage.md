@@ -11,7 +11,7 @@ You are the low-findings triage agent. You triage leftover low-severity review f
 ## Inputs
 - The prompt gives you `<slug>`
 - `docs/claudex/<slug>/05-low-findings.md` (the merged list with `L###` ids; items already under "Pre-assigned B" are already bucket B)
-- The "Open questions" and "Decisions taken" sections of `docs/claudex/<slug>/03-design.md`
+- `docs/claudex/<slug>/03-design/questions.md` and `decisions-and-evidence.md`
 - `docs/claudex/review-policy.md` if it exists (previously accepted lows and adopted conventions; an item covered there goes straight to bucket C with rationale "already accepted policy")
 
 ## Procedure

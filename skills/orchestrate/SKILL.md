@@ -40,20 +40,21 @@ Invoke the `claudex:define-requirements` skill with `$slug`. Do not continue unt
 ## Phase 2: research, design, design review → gate 2
 
 1. Launch `claudex:researcher` with the Agent tool. Prompt: "slug is $slug. Write 02-research.md."
-2. Launch `claudex:designer`. Prompt: "slug is $slug. Write 03-design.md."
-3. Ask the user each open question from the designer's final message, one at a time (AskUserQuestion). Relaunch `claudex:designer` with "Apply these answers to 03-design.md: ..." so the answers land in the document.
+2. Launch `claudex:designer`. Prompt: "slug is $slug. Write the design directory 03-design/."
+3. Ask the user each open question from the designer's final message, one at a time (AskUserQuestion). Relaunch `claudex:designer` with "Apply these answers to 03-design/ (move them to Resolved questions) and record the decisions: ..." so the answers land in the document.
 4. Write the design-review prompt to `docs/claudex/$slug/03-design-review.prompt.md`:
 
    ```
    You are reviewing a software design. Read these files:
    - docs/claudex/$slug/01-requirements.md
    - docs/claudex/$slug/02-research.md
-   - docs/claudex/$slug/03-design.md
+   - docs/claudex/$slug/03-design/ (read README.md first, then every file its Index lists)
    - docs/claudex/decisions/ (all files)
    - docs/claudex/evidence/INDEX.md (index only; open an evidence file only to check a specific claim)
    Review for: requirement coverage, interface completeness (could an implementer build from this alone?),
    unjustified complexity, missing error handling, claims about external libraries or APIs that lack an
-   "(evidence: <id>)" reference, and decisions with weak or missing rationale.
+   "(evidence: <id>)" reference, decisions with weak or missing rationale, and index completeness (every
+   file in the directory is listed in README.md and every component has an interface file).
    Respond only with the required JSON. Use severity high for anything that would block implementation.
    ```
 
@@ -66,8 +67,8 @@ Invoke the `claudex:define-requirements` skill with `$slug`. Do not continue unt
      docs/claudex/$slug/03-design-review.json
    ```
 
-6. If `--fail-on high` fails (exit 1), launch `claudex:designer` in revision mode. Prompt: "slug is $slug. Revise 03-design.md to address the findings in 03-design-review.md." Then repeat steps 4 and 5. At most two rounds. If highs remain after two rounds, show the user the counts line and the designer's final message and ask how to proceed. If `claudex-findings-merge` exits 2 (invalid JSON from Codex), rerun the `claudex-codex design-review` command once and merge again; if the merge exits 2 a second time, show the user the error and stop.
-7. Show the user the paths of `03-design.md` and `03-design-review.md` with the counts, and ask for approval. This is gate 2. Do not continue without it.
+6. If `--fail-on high` fails (exit 1), launch `claudex:designer` in revision mode. Prompt: "slug is $slug. Revise 03-design/ to address the findings in 03-design-review.md and append your response to 03-design-review.history.md." Then repeat steps 4 and 5. At most two rounds. If highs remain after two rounds, show the user the counts line and the designer's final message and ask how to proceed. If `claudex-findings-merge` exits 2 (invalid JSON from Codex), rerun the `claudex-codex design-review` command once and merge again; if the merge exits 2 a second time, show the user the error and stop.
+7. Show the user the paths of `03-design/README.md` and `03-design-review.md` with the counts, and ask for approval. This is gate 2. Do not continue without it.
 
 ## Phase 3: implementation plan → gate 3
 
@@ -88,7 +89,7 @@ Write `$T.prompt.md`:
 
 ```
 Implement the task described in docs/claudex/$slug/tasks/<task>.md.
-Read AGENTS.md and docs/claudex/$slug/03-design.md (the sections the task references) first.
+Read AGENTS.md and the design files listed under References in the task file first.
 Stay strictly within the task's scope; do not touch anything listed under "Do not touch".
 Write tests for every behavior listed in the Definition of Done. Run scripts/verify.sh before finishing.
 If something in the task or design is ambiguous or impossible, stop and set status to "blocked"
@@ -190,7 +191,7 @@ The command prints `raw: <M> merged: <N>`. If N is 0, skip to Phase 5.
 3. Show the user the summary table and the "Follow-up task candidates (from A)" and "D. Convention candidates" sections of `docs/claudex/$slug/05-low-findings-triage.md`, then ask, one question at a time (AskUserQuestion): which A candidates to implement now, which D conventions to adopt. This is gate 4; do not continue without the user's answers.
 4. Act on the answers:
    - A candidates chosen: launch `claudex:planner`. Prompt: "slug is $slug. Append tasks to 04-plan.md and tasks/ for these follow-up candidates from 05-low-findings-triage.md: <chosen candidates>." Then run Phase 4 for the new tasks (their `status` is not `done`) and, when they are done, continue to Phase 5 without a second triage; the lows those tasks leave are reported in the completion report.
-   - B items: ask the user each question, one at a time. Relaunch `claudex:designer` with "Apply these answers to 03-design.md and record the decisions: ...".
+   - B items: ask the user each question, one at a time. Relaunch `claudex:designer` with "Apply these answers to 03-design/questions.md (Resolved questions) and record the decisions: ...".
    - C items, and D items the user declined: append them to `docs/claudex/review-policy.md` under "## Accepted low findings" (create the file from `${CLAUDE_PLUGIN_ROOT}/templates/review-policy.md` if it does not exist), one line each with today's date and $slug.
    - D conventions adopted: append each rule to `AGENTS.md` and to "## Conventions adopted" in `docs/claudex/review-policy.md`.
 

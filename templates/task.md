@@ -24,7 +24,7 @@ attempts: 0
 - [ ] scripts/verify.sh passes
 
 ## References
-- Design: docs/claudex/<slug>/03-design.md, section <...>
+- Design: docs/claudex/<slug>/03-design/interfaces/<component>.md (add #heading when needed)
 - Evidence:
 
 ## History
