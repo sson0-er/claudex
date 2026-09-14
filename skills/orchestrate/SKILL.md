@@ -172,7 +172,7 @@ When this fix was triggered by review findings (not by a verify failure), append
 
 ### 4.5 Task done
 
-Set `status` in `<task>.md` to `done` and move to the next task. When every task whose status is not `done` has been processed, go to Phase 4.9.
+Set `status` in `<task>.md` to `done` and move to the next task. When every task whose status is not `done` has been processed, go to Phase 4.9 (or straight to Phase 5 when these were the follow-up tasks from Phase 4.9 step 4).
 
 ## Phase 4.9: low-findings triage → gate 4
 
